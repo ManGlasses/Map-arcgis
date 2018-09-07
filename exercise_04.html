@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no">
+  <title>Graphics</title>
+  <style>
+    html,
+    body,
+    #divView {
+      padding: 0;
+      margin: 0;
+      height: 100%;
+      width: 100%;
+      float: left;
+    }
+
+    #divPanel {
+      width: 20%;
+      position: absolute;
+      z-index: 20px;
+      height: 100%;
+      background-color: white;
+    }
+  </style>
+
+  <link rel="stylesheet" href="https://js.arcgis.com/4.8/esri/css/main.css">
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+  <script src="https://js.arcgis.com/4.8/"></script>
+
+  <script>
+    require([
+      "esri/Map",
+      "esri/views/MapView",
+      "esri/geometry/Point",
+      "esri/geometry/Polyline",
+      "esri/geometry/Polygon",
+      "esri/symbols/SimpleMarkerSymbol",
+      "esri/symbols/SimpleLineSymbol",
+      "esri/symbols/SimpleFillSymbol",
+      "esri/layers/GraphicsLayer",
+      "esri/Graphic",
+      "dojo/dom",
+      "dojo/on",
+      "dojo/domReady!"
+    ], function (
+      Map,
+      MapView,
+      Point,
+      Polyline,
+      Polygon,
+      SimpleMarkerSymbol,
+      SimpleLineSymbol,
+      SimpleFillSymbol,
+      GraphicsLayer,
+      Graphic,
+      dom,
+      on) {
+
+        var map = new Map({
+          basemap: "streets",
+          ground: "world-elevation"
+        });
+
+        var divContainerId = "divView";
+
+        var mapView = new MapView({
+          container: divContainerId,
+          map: map,
+          zoom: 6,
+          center: [100.53100560889558, 13.72248493948604] // longitude, latitude
+        });
+
+        var grpLayer = new GraphicsLayer()
+        map.add(grpLayer)
+
+        var mode = null;
+        var arrPoint = []
+
+        var btnAddPoint = dom.byId("btnAddPoint");
+        var btnAddLine = dom.byId("btnAddLine");
+        var btnAddPolygon = dom.byId("btnAddPolygon");
+        var btnClear = dom.byId("btnClear");
+
+        mapView.on("click", e => {
+          switch (mode) {
+            case "point":
+              // var point = new Point({
+              //   longitude: e.mapPoint.longitude,
+              //   latitude: e.mapPoint.latitude
+              // })
+              var symbol = new SimpleMarkerSymbol({
+                style: "square",
+                color: "blue",
+                size: "8px",
+                outline: {
+                  color: [255, 255, 0],
+                  width: 3
+                }
+              })
+              var grp = new Graphic({
+                geometry: e.mapPoint,
+                symbol: symbol
+              })
+              grpLayer.add(grp)
+              break
+
+            case "line":
+              arrPoint.push(e.mapPoint)
+              break
+
+            case "polygon":
+              arrPoint.push(e.mapPoint)
+              break
+
+            default:
+              break
+          }
+        })
+
+        mapView.on("double-click", e => {
+          switch (mode) {
+            case "line":
+              var arrPaths = []
+              if (arrPoint.length > 1) {
+                arrPoint.forEach(point => {
+                  arrPaths.push([point.x, point.y])
+                })
+              }
+              var line = new Polyline({
+                paths: [arrPaths],
+                spatialReference: { wkid: 102100 }
+              })
+              var symbol = new SimpleLineSymbol({
+                color: [255, 255, 0],
+                width: 5
+              })
+              var grp = new Graphic({
+                geometry: line,
+                symbol: symbol
+              })
+              grpLayer.add(grp)
+              arrPoint = []
+              break
+
+            case "polygon":
+              var arrRing = []
+              if (arrPoint.length > 1) {
+                arrPoint.forEach(point => {
+                  arrRing.push([point.x, point.y])
+                })
+              }
+              const polygon = new Polygon({
+                rings: [arrRing],
+                spatialReference: { wkid: 102100 }
+              });
+              var symbol = new SimpleFillSymbol({
+                color: [0, 255, 0],
+                style: "solid",
+                outline: new SimpleLineSymbol({
+                  color: "black",
+                  width: "5",
+                  style: "dash"
+                })
+              })
+              var grp = new Graphic({
+                geometry: polygon,
+                symbol: symbol
+              })
+              grpLayer.add(grp)
+              arrPoint = []
+              break
+
+            default:
+              break
+          }
+        })
+
+        on(btnAddPoint, "click", function () {
+          mode = "point";
+          dom.byId("h2Mode").innerHTML = "Mode : Point";
+        });
+        on(btnAddLine, "click", function () {
+          mode = "line";
+          arrPoint = []
+          dom.byId("h2Mode").innerHTML = "Mode : Line";
+        });
+        on(btnAddPolygon, "click", function () {
+          mode = "polygon";
+          arrPoint = []
+          dom.byId("h2Mode").innerHTML = "Mode : Polygon";
+        });
+        on(btnClear, "click", function () {
+          grpLayer.removeAll()
+        });
+      });
+  </script>
+</head>
+
+<body>
+
+  <div id="divView">
+
+  </div>
+  <div id="divPanel">
+    <h2 id="h2Mode">Mode : -</h2>
+    <button id="btnAddPoint"> Add Point </button><br/>
+    <button id="btnAddLine"> Add Line </button><br/>
+    <button id="btnAddPolygon"> Add Polygon </button><br/>
+    <button id="btnClear"> Clear Graphics</button><br/>
+  </div>
+
+</body>
+
+</html>

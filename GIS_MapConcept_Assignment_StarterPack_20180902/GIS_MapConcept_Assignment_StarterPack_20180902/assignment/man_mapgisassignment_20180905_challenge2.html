@@ -1,0 +1,358 @@
+</html>
+
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no">
+    <link rel="stylesheet" href="https://js.arcgis.com/4.8/esri/css/main.css">
+    <script src="https://js.arcgis.com/4.8/"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+
+    <title>Final</title>
+
+    <style>
+        html,
+        body,
+        #divView {
+            padding: 0;
+            margin: 0;
+            height: 100%;
+            width: 100%;
+        }
+
+        #btnDrawRoute,
+        #btnStart, 
+        #btnReset {
+            z-index: 100;
+            position: absolute;
+            font-weight: bold;
+        }
+
+        #btnDrawRoute { 
+            left: 100px;
+            top: 10px;
+        }
+
+        #btnStart {
+            left: 100px;
+            top: 50px;
+        }
+
+        #btnReset {
+            left: 100px;
+            top: 90px;
+        }
+    </style>
+
+    <script>
+        require([
+            "esri/Map",
+            "esri/views/SceneView",
+            "esri/layers/MapImageLayer",
+            "esri/layers/GraphicsLayer",
+            "esri/widgets/Sketch/SketchViewModel",
+            "esri/Graphic",
+            "esri/geometry/Point",
+            "esri/geometry/Polyline",
+            "esri/symbols/PointSymbol3D",
+            "esri/symbols/ObjectSymbol3DLayer",
+            "esri/symbols/SimpleLineSymbol",
+            "esri/tasks/IdentifyTask",
+            "esri/tasks/support/IdentifyParameters",
+            "dojo/on",
+            "dojo/domReady!"
+        ], function (
+            Map,
+            SceneView,
+            MapImageLayer,
+            GraphicsLayer,
+            SketchViewModel,
+            Graphic,
+            Point,
+            Polyline,
+            PointSymbol3D,
+            ObjectSymbol3DLayer,
+            SimpleLineSymbol,
+            IdentifyTask,
+            IdentifyParameters,
+            on
+        ) {
+                var map = new Map({
+                    basemap: "topo",
+                    ground: "world-elevation"
+                })
+
+                var mapView = new SceneView({
+                    container: "divView",
+                    map: map,
+                    center: [-96.668876, 36.791620],
+                    zoom: 5
+                })
+
+                var IdentifyTask = new IdentifyTask("https://sampleserver6.arcgisonline.com/arcgis/rest/services/USA/MapServer")
+                var params = new IdentifyParameters({
+                    tolerance: 10,
+                    layerIds: [0, 2],
+                    layerOption: ["all"]
+                })
+
+                var mapImageLayerUSA = new MapImageLayer({
+                    id: "mapImageLayerUSA",
+                    url: "https://sampleserver6.arcgisonline.com/arcgis/rest/services/USA/MapServer",
+                    opacity: 0.5
+                })
+
+                var sketchViewModel = null
+
+                var grpLayer = new GraphicsLayer()
+                map.add(mapImageLayerUSA)
+                map.add(grpLayer)
+
+                var graphicUfo = null
+                var pathsForRunUfo = []
+                var numberOfPathsForRunUfo
+
+                var globalID
+                var countOfPathUfo = 0
+                var countOfRunUfo = 0
+
+                // sketch view
+                mapView.when(function () {
+                    sketchViewModel = new SketchViewModel({
+                        view: mapView,
+                        layer: grpLayer,
+                        polylineSymbol: new SimpleLineSymbol({
+                            color: [0, 0, 255],
+                            width: "4"
+                        }),
+                    })
+
+                    sketchViewModel.on("create-complete", addGraphic)
+                })
+
+                function createUfo(x, y, spatialReference) {
+                    var point = new Point({
+                        x: x,
+                        y: y,
+                        z: 100000,
+                        spatialReference: spatialReference
+                    })
+
+                    var symbol = new PointSymbol3D({
+                        symbolLayers: [new ObjectSymbol3DLayer({
+                            width: 50000,
+                            height: 50000,
+                            resource: { primitive: "sphere" },
+                            material: { color: "green" }
+                        }), new ObjectSymbol3DLayer({
+                            width: 100000,
+                            height: 5000,
+                            resource: { primitive: "cylinder" },
+                            material: { color: "green" }
+                        })]
+                    })
+
+                    graphicUfo = new Graphic({
+                        geometry: point,
+                        symbol: symbol
+                    })
+
+                    grpLayer.add(graphicUfo)
+                }
+
+                function createPointByEdge(x, y, spatialReference) {
+                    var point = new Point({
+                        x: x,
+                        y: y,
+                        spatialReference: spatialReference
+                    })
+
+                    var symbol = new PointSymbol3D({
+                        symbolLayers: [new ObjectSymbol3DLayer({
+                            width: 50000,
+                            height: 50000,
+                            depth: 50000,
+                            resource: { primitive: "cube" },
+                            material: { color: "red" }
+                        })]
+                    })
+
+                    var graphic = new Graphic({
+                        geometry: point,
+                        symbol: symbol
+                    })
+
+                    grpLayer.add(graphic)
+                }
+
+                function addGraphic(e) {
+                    var graphicPolyline = new Graphic({
+                        geometry: e.geometry,
+                        symbol: sketchViewModel.graphic.symbol
+                    })
+
+                    grpLayer.add(graphicPolyline)
+
+                    pathsForRunUfo = e.geometry.paths[0]
+                    numberOfPathsForRunUfo = pathsForRunUfo.length
+
+                    $.each(e.geometry.paths[0], function (index, value) {
+                        if (index == 0) {
+                            createUfo(value[0], value[1], e.geometry.spatialReference)
+                        }
+                        else {
+                            createPointByEdge(value[0], value[1], e.geometry.spatialReference)
+                        }
+                    })
+
+                    $("#btnStart").attr("disabled", false)
+                }
+
+                // Identify
+                mapView.on("click", function (e) {
+                    params.geometry = e.mapPoint
+                    params.mapExtent = mapView.extent
+
+                    mapView.hitTest(e).then(function (response) {
+                        var result = response.results
+                        if (result.length && result[result.length - 1].graphic && result[0].graphic.geometry.type == "point") {
+                            IdentifyTask.execute(params).then(function (response) {
+                                var results = response.results
+                                if (results.length > 0) {
+                                    var features = []
+                                    $.each(results, function (index, value) {
+                                        if (value.layerId == 0) {
+                                            var layerName = value.layerName
+                                            var name = value.feature.attributes.AREANAME
+                                            var isCaptial = value.feature.attributes.CAPITAL == "Y" ? "Yes" : "No"
+                                            var population = value.feature.attributes.POP2000
+                                            var classOfValue = value.feature.attributes.CLASS
+                                            var content = "<b>Name: </b>" + name
+                                            content += "<br/><b>Is Captial: </b>" + isCaptial
+                                            content += "<br/><b>Population: </b>" + population
+                                            content += "<br/><b>Class: </b>" + classOfValue
+
+                                            value.feature.popupTemplate = {
+                                                title: layerName,
+                                                content: content
+                                            }
+
+                                            features.push(value.feature)
+                                        }
+                                        else if (value.layerId == 2) {
+                                            var layerName = value.layerName
+                                            var name = value.feature.attributes.STATE_NAME
+                                            var population = value.feature.attributes.POP2000
+                                            var content = "<b>Name: </b>" + name
+                                            content += "<br/><b>Population: </b>" + population
+
+                                            value.feature.popupTemplate = {
+                                                title: layerName,
+                                                content: content
+                                            }
+
+                                            features.push(value.feature)
+                                        }
+
+                                    })
+
+                                    mapView.popup.open({
+                                        features: features,
+                                        location: e.mapPoint
+                                    })
+                                }
+                            })
+                        }
+                    })
+                })
+
+                function stopAnimationFrame() {
+                    cancelAnimationFrame(globalID)
+                }
+
+                function repeatOften() {
+                    if (countOfPathUfo >= numberOfPathsForRunUfo - 1) {
+                        $("#btnReset").attr("disabled", false)
+
+                        countOfPathUfo = 0
+                        countOfRunUfo = 0
+
+                        return stopAnimationFrame()
+                    }
+
+                    var x1 = pathsForRunUfo[countOfPathUfo][0]
+                    var x2 = pathsForRunUfo[countOfPathUfo + 1][0]
+                    var y1 = pathsForRunUfo[countOfPathUfo][1]
+                    var y2 = pathsForRunUfo[countOfPathUfo + 1][1]
+
+                    var fps = 60
+                    var xDiff = (x2 - x1) / fps
+                    var yDiff = (y2 - y1) / fps
+
+                    grpLayer.remove(graphicUfo)
+                    createUfo(graphicUfo.geometry.x + xDiff, graphicUfo.geometry.y + yDiff, { wkid: 102100 })
+
+                    countOfRunUfo++
+                    if (countOfRunUfo == 60) {
+                        grpLayer.remove(graphicUfo)
+                        createUfo(x2, y2, { wkid: 102100 })
+
+                        countOfRunUfo = 0
+                        countOfPathUfo++
+                    }
+
+                    $("#btnDrawRoute").click(function () {
+                        countOfPathUfo = 0
+                        countOfRunUfo = 0
+
+                        return stopAnimationFrame()
+                    })
+
+                    $("#btnReset").click(function () {
+                        $("#btnStart").attr("disabled", false)
+                        $("#btnReset").attr("disabled", true)
+
+                        countOfPathUfo = 0
+                        countOfRunUfo = 0
+
+                        var x1 = pathsForRunUfo[0][0]
+                        var y1 = pathsForRunUfo[0][1]
+
+                        grpLayer.remove(graphicUfo)
+                        createUfo(x1, y1, { wkid: 102100 })
+
+                        return stopAnimationFrame()
+                    })
+
+                    globalID = requestAnimationFrame(repeatOften)
+                }
+
+                $("#btnDrawRoute").click(function () {
+                    $("#btnStart").attr("disabled", true)
+                    $("#btnReset").attr("disabled", true)
+
+                    grpLayer.removeAll()
+                    sketchViewModel.reset()
+                    sketchViewModel.create("polyline")
+                })
+
+                $("#btnStart").click(function () {
+                    $("#btnStart").attr("disabled", true)
+                    $("#btnReset").attr("disabled", true)
+
+                    globalID = requestAnimationFrame(repeatOften)
+                })
+            })
+    </script>
+</head>
+
+<body>
+    <div id="divView"></div>
+    <input id="btnDrawRoute" type="button" value="Draw Route" />
+    <input id="btnStart" type="button" value="Attack" disabled />
+    <input id="btnReset" type="button" value="Reset" disabled />
+</body>
+
+</html>

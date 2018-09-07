@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no">
+  <title>Map & View</title>
+  <style>
+    html,
+    body,
+    #divView {
+      padding: 0;
+      margin: 0;
+      height: 100%;
+      width: 100%;
+    }
+
+    #btnSwitch {
+      z-index: 100;
+      position: absolute;
+      left: 100px;
+      top: 10px;
+      width: 50px;
+      height: 50px;
+      font-weight: bold;
+    }
+  </style>
+
+  <link rel="stylesheet" href="https://js.arcgis.com/4.8/esri/css/main.css">
+  <script src="https://js.arcgis.com/4.8/"></script>
+  <script>
+    require([
+      "esri/Map",
+      "esri/views/MapView",
+      "esri/views/SceneView",
+      "dojo/on",
+      "dojo/domReady!"
+    ], function (Map, MapView, SceneView, on) {
+      var is2D = true
+      var map = new Map({
+        basemap: "national-geographic",
+        ground: "world-elevation"
+      })
+
+      var divContainerId = "divView"
+
+      var mapView = new MapView({
+        container: divContainerId,
+        map: map,
+        center: [100.53100560889558, 13.72248493948604],
+        zoom: 15
+      })
+
+      var sceneView = new SceneView({
+        container: null,
+        map: map
+      })
+
+      var activeView = mapView
+
+      on(document.getElementById("btnSwitch"), "click", () => {
+        activeView.container = null
+        if (is2D) {
+          sceneView.viewpoint = activeView.viewpoint.clone()
+          activeView = sceneView
+          btnSwitch.value = "3D"
+        }
+        else {
+          mapView.viewpoint = activeView.viewpoint.clone()
+          activeView = mapView
+          btnSwitch.value = "2D"
+        }
+
+        activeView.container = divContainerId
+        is2D = !is2D
+      })
+
+    })
+  </script>
+</head>
+
+<body>
+  <div id="divView"></div>
+  <input id="btnSwitch" type="button" value="2D" />
+</body>
+
+</html>

@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no">
+  <title>Identify</title>
+  <style>
+    html,
+    body,
+    #divView {
+      padding: 0;
+      margin: 0;
+      height: 100%;
+      width: 100%;
+      float: left;
+    }
+
+    #divPanel {
+      width: 20%;
+      position: absolute;
+      z-index: 20px;
+      height: 100%;
+      background-color: white;
+    }
+  </style>
+
+  <link rel="stylesheet" href="https://js.arcgis.com/4.8/esri/css/main.css">
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+  <script src="https://js.arcgis.com/4.8/"></script>
+
+  <script>
+    require([
+      "esri/Map",
+      "esri/views/MapView",
+      "esri/geometry/Extent",
+      "esri/layers/MapImageLayer",
+      "esri/tasks/IdentifyTask",
+      "esri/tasks/support/IdentifyParameters",
+      "dojo/dom",
+      "dojo/on",
+      "dojo/domReady!"
+    ], function (Map, MapView, Extent, MapImageLayer, IdentifyTask, IdentifyParameters, dom, on) {
+
+      var map = new Map({
+        basemap: "streets",
+        ground: "world-elevation"
+      });
+
+      var divContainerId = "divView";
+
+      var mapView = new MapView({
+        container: divContainerId,
+        map: map,
+        extent: new Extent({
+          xmin: -119.97727829597589,
+          ymin: 34.75019112370114,
+          xmax: -119.10884666994308,
+          ymax: 35.69641644201112,
+          spatialReference: {
+            wkid: 4326
+          }
+        })
+      });
+
+      var IdentifyTask = new IdentifyTask("https://sampleserver6.arcgisonline.com/arcgis/rest/services/Military/MapServer")
+      var layerId = [2, 3, 4, 5, 6, 9]
+      var params = new IdentifyParameters({
+        tolerance: 3,
+        layerId,
+        layerOption: ["top"],
+        width: mapView.width,
+        height: mapView.height,
+        returnGeometry: true
+      })
+
+      var mapInfo = new MapImageLayer({ url: "https://sampleserver6.arcgisonline.com/arcgis/rest/services/Military/MapServer" });
+
+      map.add(mapInfo);
+
+      //exercise_06.html:58:9
+
+      on(mapView, "click", function (evt) {
+        params.geometry = evt.mapPoint
+        params.mapExtent = mapView.extent
+        IdentifyTask.execute(params).then(response => {
+          console.log("response", response)
+          var results = response.results
+          if (results.length > 0) {
+            var features = results.map(item => {
+              var content = `<b>OBJECTID : </b>${item.feature.attributes.OBJECTID}<br/>`
+              if (layerId.some(check => item.layerId == check)) {
+                content += `<b>NAME : </b>${item.feature.attributes.RuleID}<br/>`
+              }
+              item.feature.popupTemplate = {
+                title: `${item.layerId} ${item.layerName}`,
+                content
+              }
+              return item.feature
+            })
+
+            mapView.popup.open({
+              features,
+              location: evt.mapPoint
+            })
+          }
+        })
+      });
+    });
+  </script>
+</head>
+
+<body>
+
+  <div id="divView">
+
+  </div>
+  <div id="divPanel">
+
+  </div>
+
+</body>
+
+</html>

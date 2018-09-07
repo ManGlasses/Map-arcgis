@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no">
+  <title>Edting</title>
+  <style>
+    html,
+    body,
+    #divView {
+      padding: 0;
+      margin: 0;
+      height: 100%;
+      width: 100%;
+      float: left;
+    }
+
+    #divPanel {
+      width: 20%;
+      position: absolute;
+      z-index: 20px;
+      height: 100%;
+      background-color: white;
+    }
+  </style>
+
+  <link rel="stylesheet" href="https://js.arcgis.com/4.8/esri/css/main.css">
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+  <script src="https://js.arcgis.com/4.8/"></script>
+
+  <script>
+    require(
+      [
+        "esri/Map",
+        "esri/views/MapView",
+        "esri/layers/FeatureLayer",
+        "esri/layers/GraphicsLayer",
+        "esri/widgets/Sketch/SketchViewModel",
+        "esri/Graphic",
+        "esri/geometry/Polygon",
+        "esri/symbols/SimpleFillSymbol",
+        "dojo/dom",
+        "dojo/on",
+        "dojo/domReady!"
+      ], function (
+        Map,
+        MapView,
+        FeatureLayer,
+        GraphicsLayer,
+        SketchViewModel,
+        Graphic,
+        Polygon,
+        SimpleFillSymbol,
+        dom,
+        on
+      ) {
+        var map = new Map({
+          basemap: "streets",
+          ground: "world-elevation"
+        });
+
+        var divContainerId = "divView";
+
+        var sketchViewModel = null
+
+        var mapView = new MapView({
+          container: divContainerId,
+          map: map,
+          zoom: 15,
+          center: [-83.244, 42.581]//[100.53100560889558,13.72248493948604] // longitude, latitude
+        });
+
+        var polygonLayer = new FeatureLayer({
+          id: "polygonLyr",
+          url: "https://sampleserver6.arcgisonline.com/arcgis/rest/services/Military/FeatureServer/9",
+          outFields: ["*"]
+        })
+
+        var grpLayer = new GraphicsLayer()
+        map.add(polygonLayer)
+        map.add(grpLayer)
+
+        mapView.when(() => {
+          sketchViewModel = new SketchViewModel({
+            view: mapView,
+            layer: grpLayer,
+            polygonSymbol: new SimpleFillSymbol({
+              color: "rgba(138,43,226, 0.8)",
+              style: "solid",
+              outline: {
+                color: "white",
+                width: 1
+              }
+            })
+          })
+
+          var editGraphic = null
+          mapView.on("click", e => {
+            mapView.hitTest(e).then(response => {
+              var result = response.results
+              if (result.length && result[result.length - 1].graphic) {
+                editGraphic = result[result.length - 1].graphic
+                grpLayer.remove(editGraphic)
+                sketchViewModel.update(editGraphic)
+              }
+            })
+          })
+
+          mapView.on("double-click", e => {
+            mapView.hitTest(e).then(response => {
+              var result = response.results
+              if (result.length && result[result.length - 1].graphic) {
+                polygonLayer.applyEdits({
+                  deleteFeatures: [result[result.length - 1].graphic]
+                })
+              }
+            })
+          })
+
+          sketchViewModel.on("create-complete", e => {
+            var graphic = new Graphic({
+              geometry: e.geometry,
+              symbol: sketchViewModel.graphic.symbol
+            })
+            polygonLayer.applyEdits({
+              addFeatures: [graphic]
+            })
+          })
+
+          sketchViewModel.on("update-complete", e => {
+            var graphic = new Graphic({
+              geometry: e.geometry,
+              symbol: sketchViewModel.graphic.symbol,
+              attributes: e.graphic.attributes
+            })
+            polygonLayer.applyEdits({
+              updateFeatures: [graphic]
+            })
+          })
+
+        })
+
+        $("#btnAddPolygon").click(() => {
+          sketchViewModel.create("polygon")
+        })
+
+      });
+  </script>
+</head>
+
+<body>
+
+  <div id="divView">
+
+  </div>
+  <div id="divPanel">
+    <button id="btnAddPoint"> Add Point </button><br/>
+    <button id="btnAddLine"> Add Line </button><br/>
+    <button id="btnAddPolygon"> Add Polygon(Free Hand) </button><br/>
+    <button id="btnClear"> Clear Graphics</button><br/>
+  </div>
+
+</body>
+
+</html>
