@@ -110,13 +110,13 @@
                 map.add(mapImageLayerUSA)
                 map.add(grpLayer)
 
-                var graphicUfo = null
-                var pathsForRunUfo = []
-                var numberOfPathsForRunUfo
+                var graphicUFO = null
+                var pathsForRunUFO = []
+                var numberOfPathsForRunUFO
 
-                var globalID
-                var countOfPathUfo = 0
-                var countOfRunUfo = 0
+                var animationForUFO
+                var countOfPathUFO = 0
+                var countOfRunUFO = 0
 
                 // sketch view
                 mapView.when(function () {
@@ -132,7 +132,7 @@
                     sketchViewModel.on("create-complete", addGraphic)
                 })
 
-                function createUfo(x, y, spatialReference) {
+                function createUFO(x, y, spatialReference) {
                     var point = new Point({
                         x: x,
                         y: y,
@@ -154,12 +154,12 @@
                         })]
                     })
 
-                    graphicUfo = new Graphic({
+                    graphicUFO = new Graphic({
                         geometry: point,
                         symbol: symbol
                     })
 
-                    grpLayer.add(graphicUfo)
+                    grpLayer.add(graphicUFO)
                 }
 
                 function createPointByEdge(x, y, spatialReference) {
@@ -195,12 +195,12 @@
 
                     grpLayer.add(graphicPolyline)
 
-                    pathsForRunUfo = e.geometry.paths[0]
-                    numberOfPathsForRunUfo = pathsForRunUfo.length
+                    pathsForRunUFO = e.geometry.paths[0]
+                    numberOfPathsForRunUFO = pathsForRunUFO.length
 
                     $.each(e.geometry.paths[0], function (index, value) {
                         if (index == 0) {
-                            createUfo(value[0], value[1], e.geometry.spatialReference)
+                            createUFO(value[0], value[1], e.geometry.spatialReference)
                         }
                         else {
                             createPointByEdge(value[0], value[1], e.geometry.spatialReference)
@@ -268,70 +268,47 @@
                     })
                 })
 
-                function stopAnimationFrame() {
-                    cancelAnimationFrame(globalID)
-                }
-
-                function repeatOften() {
-                    if (countOfPathUfo >= numberOfPathsForRunUfo - 1) {
+                function runUFO() {
+                    if (countOfPathUFO >= numberOfPathsForRunUFO - 1) {
                         $("#btnReset").attr("disabled", false)
 
-                        countOfPathUfo = 0
-                        countOfRunUfo = 0
+                        countOfPathUFO = 0
+                        countOfRunUFO = 0
 
-                        return stopAnimationFrame()
+                        return cancelAnimationFrame(animationForUFO)
                     }
 
-                    var x1 = pathsForRunUfo[countOfPathUfo][0]
-                    var x2 = pathsForRunUfo[countOfPathUfo + 1][0]
-                    var y1 = pathsForRunUfo[countOfPathUfo][1]
-                    var y2 = pathsForRunUfo[countOfPathUfo + 1][1]
+                    var x1 = pathsForRunUFO[countOfPathUFO][0]
+                    var x2 = pathsForRunUFO[countOfPathUFO + 1][0]
+                    var y1 = pathsForRunUFO[countOfPathUFO][1]
+                    var y2 = pathsForRunUFO[countOfPathUFO + 1][1]
 
                     var fps = 60
                     var xDiff = (x2 - x1) / fps
                     var yDiff = (y2 - y1) / fps
 
-                    grpLayer.remove(graphicUfo)
-                    createUfo(graphicUfo.geometry.x + xDiff, graphicUfo.geometry.y + yDiff, { wkid: 102100 })
+                    grpLayer.remove(graphicUFO)
+                    createUFO(graphicUFO.geometry.x + xDiff, graphicUFO.geometry.y + yDiff, { wkid: 102100 })
 
-                    countOfRunUfo++
-                    if (countOfRunUfo == 60) {
-                        grpLayer.remove(graphicUfo)
-                        createUfo(x2, y2, { wkid: 102100 })
+                    countOfRunUFO++
+                    if (countOfRunUFO == fps) {
+                        grpLayer.remove(graphicUFO)
+                        createUFO(x2, y2, { wkid: 102100 })
 
-                        countOfRunUfo = 0
-                        countOfPathUfo++
+                        countOfRunUFO = 0
+                        countOfPathUFO++
                     }
 
-                    $("#btnDrawRoute").click(function () {
-                        countOfPathUfo = 0
-                        countOfRunUfo = 0
-
-                        return stopAnimationFrame()
-                    })
-
-                    $("#btnReset").click(function () {
-                        $("#btnStart").attr("disabled", false)
-                        $("#btnReset").attr("disabled", true)
-
-                        countOfPathUfo = 0
-                        countOfRunUfo = 0
-
-                        var x1 = pathsForRunUfo[0][0]
-                        var y1 = pathsForRunUfo[0][1]
-
-                        grpLayer.remove(graphicUfo)
-                        createUfo(x1, y1, { wkid: 102100 })
-
-                        return stopAnimationFrame()
-                    })
-
-                    globalID = requestAnimationFrame(repeatOften)
+                    animationForUFO = requestAnimationFrame(runUFO)
                 }
 
                 $("#btnDrawRoute").click(function () {
                     $("#btnStart").attr("disabled", true)
                     $("#btnReset").attr("disabled", true)
+
+                    countOfPathUFO = 0
+                    countOfRunUFO = 0
+                    cancelAnimationFrame(animationForUFO)
 
                     grpLayer.removeAll()
                     sketchViewModel.reset()
@@ -339,10 +316,21 @@
                 })
 
                 $("#btnStart").click(function () {
-                    $("#btnStart").attr("disabled", true)
+                    $(this).attr("disabled", true)
                     $("#btnReset").attr("disabled", true)
 
-                    globalID = requestAnimationFrame(repeatOften)
+                    animationForUFO = requestAnimationFrame(runUFO)
+                })
+
+                $("#btnReset").click(function () {
+                    $(this).attr("disabled", true)
+                    $("#btnStart").removeAttr("disabled")
+
+                    var x1 = pathsForRunUFO[0][0]
+                    var y1 = pathsForRunUFO[0][1]
+
+                    grpLayer.remove(graphicUFO)
+                    createUFO(x1, y1, { wkid: 102100 })
                 })
             })
     </script>

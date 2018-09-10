@@ -120,7 +120,7 @@
                 var pathsForRunFighterjet = []
                 var numberOfPathsForRunFighterjet
 
-                var globalID
+                var animationForFighterjet
                 var countOfPathFighterjet = 0
                 var countOfRunFighterjet = 0
 
@@ -269,11 +269,7 @@
                     })
                 })
 
-                function stopAnimationFrame() {
-                    cancelAnimationFrame(globalID)
-                }
-
-                function repeatOften() {
+                function runFighterjet() {
                     if (countOfPathFighterjet >= numberOfPathsForRunFighterjet - 1) {
                         $("#btnStop").attr("disabled", true)
                         $("#btnReset").attr("disabled", false)
@@ -281,78 +277,46 @@
                         countOfPathFighterjet = 0
                         countOfRunFighterjet = 0
 
-                        return stopAnimationFrame()
+                        return cancelAnimationFrame(animationForFighterjet)
                     }
 
-                    var x1 = pathsForRunFighterjet[countOfPathFighterjet][0]
-                    var x2 = pathsForRunFighterjet[countOfPathFighterjet + 1][0]
-                    var y1 = pathsForRunFighterjet[countOfPathFighterjet][1]
-                    var y2 = pathsForRunFighterjet[countOfPathFighterjet + 1][1]
+                    else {
+                        var x1 = pathsForRunFighterjet[countOfPathFighterjet][0]
+                        var x2 = pathsForRunFighterjet[countOfPathFighterjet + 1][0]
+                        var y1 = pathsForRunFighterjet[countOfPathFighterjet][1]
+                        var y2 = pathsForRunFighterjet[countOfPathFighterjet + 1][1]
 
-                    var fps = 60
-                    var xDiff = (x2 - x1) / fps
-                    var yDiff = (y2 - y1) / fps
-
-                    var clonePoint = $.extend(true, {}, graphicFighterjet.geometry)
-                    clonePoint.x += xDiff
-                    clonePoint.y += yDiff
-                    graphicFighterjet.geometry = clonePoint
-
-                    setRotateOfFighterjet(x1, x2, y1, y2)
-
-                    countOfRunFighterjet++
-                    if (countOfRunFighterjet == 60) {
-                        clonePoint.x = x2
-                        clonePoint.y = y2
-                        countOfRunFighterjet = 0
-                        countOfPathFighterjet++
-                    }
-
-                    $("#btnDrawRoute").click(function () {
-                        countOfPathFighterjet = 0
-                        countOfRunFighterjet = 0
-
-                        return stopAnimationFrame()
-                    })
-
-                    $("#btnStop").click(function () {
-                        $("#btnStart").attr("disabled", false)
-                        $("#btnStop").attr("disabled", true)
-                        $("#btnReset").attr("disabled", false)
-
-                        cancelAnimationFrame(globalID)
-                    })
-
-                    $("#btnReset").click(function () {
-                        $("#btnStart").attr("disabled", false)
-                        $("#btnStop").attr("disabled", true)
-                        $("#btnReset").attr("disabled", true)
-
-                        countOfPathFighterjet = 0
-                        countOfRunFighterjet = 0
-
-                        var x1 = pathsForRunFighterjet[0][0]
-                        var x2 = pathsForRunFighterjet[1][0]
-                        var y1 = pathsForRunFighterjet[0][1]
-                        var y2 = pathsForRunFighterjet[1][1]
+                        var fps = 60
+                        var xDiff = (x2 - x1) / fps
+                        var yDiff = (y2 - y1) / fps
 
                         var clonePoint = $.extend(true, {}, graphicFighterjet.geometry)
-                        clonePoint.x = x1
-                        clonePoint.y = y1
+                        clonePoint.x += xDiff
+                        clonePoint.y += yDiff
                         graphicFighterjet.geometry = clonePoint
 
                         setRotateOfFighterjet(x1, x2, y1, y2)
 
-                        return stopAnimationFrame()
-                    })
+                        countOfRunFighterjet++
+                        if (countOfRunFighterjet == fps) {
+                            clonePoint.x = x2
+                            clonePoint.y = y2
+                            countOfRunFighterjet = 0
+                            countOfPathFighterjet++
+                        }
 
-                    globalID = requestAnimationFrame(repeatOften)
+                        animationForFighterjet = requestAnimationFrame(runFighterjet)
+                    }
                 }
 
                 $("#btnDrawRoute").click(function () {
                     $("#btnStart").attr("disabled", true)
                     $("#btnStop").attr("disabled", true)
                     $("#btnReset").attr("disabled", true)
+
+                    countOfPathFighterjet = 0
+                    countOfRunFighterjet = 0
+                    cancelAnimationFrame(animationForFighterjet)
 
                     grpLayer.removeAll()
                     sketchViewModel.reset()
@@ -364,7 +328,36 @@
                     $("#btnStop").attr("disabled", false)
                     $("#btnReset").attr("disabled", true)
 
-                    globalID = requestAnimationFrame(repeatOften)
+                    animationForFighterjet = requestAnimationFrame(runFighterjet)
+                })
+
+                $("#btnStop").click(function () {
+                    $("#btnStart").attr("disabled", false)
+                    $("#btnStop").attr("disabled", true)
+                    $("#btnReset").attr("disabled", false)
+
+                    cancelAnimationFrame(animationForFighterjet)
+                })
+
+                $("#btnReset").click(function () {
+                    $("#btnStart").attr("disabled", false)
+                    $("#btnStop").attr("disabled", true)
+                    $("#btnReset").attr("disabled", true)
+
+                    var x1 = pathsForRunFighterjet[0][0]
+                    var x2 = pathsForRunFighterjet[1][0]
+                    var y1 = pathsForRunFighterjet[0][1]
+                    var y2 = pathsForRunFighterjet[1][1]
+
+                    var clonePoint = $.extend(true, {}, graphicFighterjet.geometry)
+                    clonePoint.x = x1
+                    clonePoint.y = y1
+                    graphicFighterjet.geometry = clonePoint
+
+                    setRotateOfFighterjet(x1, x2, y1, y2)
+
+                    countOfPathFighterjet = 0
+                    countOfRunFighterjet = 0
                 })
             })
     </script>

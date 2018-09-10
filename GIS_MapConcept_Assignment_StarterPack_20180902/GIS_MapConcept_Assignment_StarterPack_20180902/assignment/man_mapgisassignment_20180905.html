@@ -111,6 +111,14 @@
                 map.add(mapImageLayerUSA)
                 map.add(grpLayer)
 
+                var graphicUFO = null
+                var pathsForRunUFO = []
+                var numberOfPathsForRunUFO
+
+                var animationForUFO
+                var countOfPathUFO = 0
+                var countOfRunUFO = 0
+
                 // sketch view
                 mapView.when(function () {
                     sketchViewModel = new SketchViewModel({
@@ -148,10 +156,6 @@
                     grpLayer.add(graphicPoint)
                 }
 
-                var graphicUFO = null
-                var pathsForRunUFO = []
-                var numberOfPathsForRunUFO
-
                 function addGraphic(e) {
                     var graphicPolyline = new Graphic({
                         geometry: e.geometry,
@@ -188,7 +192,7 @@
                     })
 
                     $("#btnStart").removeAttr("disabled")
-                    $("#btnReset").removeAttr("disabled")
+                    $("#btnReset").attr("disabled", true)
                 }
 
                 // Identify
@@ -250,49 +254,15 @@
 
                 })
 
-                $("#btnDrawRoute").click(function () {
-                    grpLayer.removeAll()
-                    sketchViewModel.reset()
-                    sketchViewModel.create("polyline")
-                })
-
-                var globalID
-                var countOfPathUFO = 0
-                var countOfRunUFO = 0
-
-                function stopAnimationFrame() {
-                    cancelAnimationFrame(globalID)
-                }
-
-                function repeatOften() {
+                function runUFO() {
                     if (countOfPathUFO >= numberOfPathsForRunUFO - 1) {
+                        $("#btnReset").removeAttr("disabled")
+
                         countOfPathUFO = 0
                         countOfRunUFO = 0
-                        return stopAnimationFrame()
+
+                        return cancelAnimationFrame(animationForUFO)
                     }
-
-                    $("#btnDrawRoute").click(function () {
-                        countOfPathUFO = 0
-                        countOfRunUFO = 0
-                        return stopAnimationFrame()
-                    })
-
-                    $("#btnReset").click(function () {
-                        $("#btnStart").removeAttr("disabled")
-
-                        countOfPathUFO = 0
-                        countOfRunUFO = 0
-
-                        var x1 = pathsForRunUFO[0][0]
-                        var y1 = pathsForRunUFO[0][1]
-
-                        var clonePoint = $.extend(true, {}, graphicUFO.geometry)
-                        clonePoint.x = x1
-                        clonePoint.y = y1
-                        graphicUFO.geometry = clonePoint
-
-                        return stopAnimationFrame()
-                    })
 
                     var x1 = pathsForRunUFO[countOfPathUFO][0]
                     var x2 = pathsForRunUFO[countOfPathUFO + 1][0]
@@ -318,12 +288,40 @@
                         countOfPathUFO++
                     }
 
-                    globalID = requestAnimationFrame(repeatOften)
+                    animationForUFO = requestAnimationFrame(runUFO)
                 }
+
+                $("#btnDrawRoute").click(function () {
+                    $("#btnStart").attr("disabled", true)
+                    $("#btnReset").attr("disabled", true)
+
+                    countOfPathUFO = 0
+                    countOfRunUFO = 0
+                    cancelAnimationFrame(animationForUFO)
+
+                    grpLayer.removeAll()
+                    sketchViewModel.reset()
+                    sketchViewModel.create("polyline")
+                })
 
                 $("#btnStart").click(function () {
                     $(this).attr("disabled", true)
-                    globalID = requestAnimationFrame(repeatOften)
+                    $("#btnReset").attr("disabled", true)
+
+                    animationForUFO = requestAnimationFrame(runUFO)
+                })
+
+                $("#btnReset").click(function () {
+                    $(this).attr("disabled", true)
+                    $("#btnStart").removeAttr("disabled")
+
+                    var x1 = pathsForRunUFO[0][0]
+                    var y1 = pathsForRunUFO[0][1]
+
+                    var clonePoint = $.extend(true, {}, graphicUFO.geometry)
+                    clonePoint.x = x1
+                    clonePoint.y = y1
+                    graphicUFO.geometry = clonePoint
                 })
             })
     </script>
